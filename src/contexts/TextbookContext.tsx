@@ -63,11 +63,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       const { previousId, nextId } = getAdjacentSections(state.textbook, sectionId);
       const breadcrumbs = buildBreadcrumbs(state.textbook, sectionId);
 
-      // 親章を展開
-      const chapterId = sectionId.split('/')[0];
-      const updatedChapters = state.textbook.chapters.map((chapter) =>
-        chapter.id === chapterId ? { ...chapter, isExpanded: true } : chapter
-      );
+      // 親章を展開（READMEの場合はスキップ）
+      let updatedChapters = state.textbook.chapters;
+      if (sectionId !== README_SECTION_ID) {
+        const chapterId = sectionId.split('/')[0];
+        updatedChapters = state.textbook.chapters.map((chapter) =>
+          chapter.id === chapterId ? { ...chapter, isExpanded: true } : chapter
+        );
+      }
 
       return {
         ...state,

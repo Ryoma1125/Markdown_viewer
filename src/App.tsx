@@ -134,7 +134,11 @@ function AppContent() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
               </div>
             ) : (
-              <MarkdownViewer content={currentContent} />
+              <MarkdownViewer 
+                content={currentContent} 
+                currentSectionId={navigation.currentSectionId}
+                onLinkClick={handleSelectSection}
+              />
             )}
           </div>
 

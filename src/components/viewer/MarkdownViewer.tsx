@@ -7,9 +7,13 @@ import type { Components } from 'react-markdown';
 interface MarkdownViewerProps {
   /** マークダウンコンテンツ */
   content: string | null;
+  /** 現在の節ID */
+  currentSectionId?: string | null;
+  /** リンククリック時のハンドラ */
+  onLinkClick?: (href: string) => void;
 }
 
-export function MarkdownViewer({ content }: MarkdownViewerProps) {
+export function MarkdownViewer({ content, currentSectionId, onLinkClick }: MarkdownViewerProps) {
   if (content === null) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
@@ -19,6 +23,43 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
   }
 
   const components: Components = {
+    a({ href, children, ...props }) {
+      // 相対パス（.md ファイル）へのリンクの場合
+      if (href && href.match(/^\.\/.*\.md$/)) {
+        return (
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              if (onLinkClick && currentSectionId) {
+                // 現在の節のディレクトリを取得
+                const currentDir = currentSectionId.split('/').slice(0, -1).join('/');
+                // 相対パスを解決
+                const fileName = href.replace('./', '');
+                const targetSectionId = currentDir ? `${currentDir}/${fileName}` : fileName;
+                onLinkClick(targetSectionId);
+              }
+            }}
+            className="text-blue-600 hover:text-blue-800 underline cursor-pointer"
+            {...props}
+          >
+            {children}
+          </a>
+        );
+      }
+      // 外部リンクの場合
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 underline"
+          {...props}
+        >
+          {children}
+        </a>
+      );
+    },
     code({ className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || '');
       const isInline = !match && !className;
