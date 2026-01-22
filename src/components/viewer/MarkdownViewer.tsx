@@ -1,8 +1,81 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { Components } from 'react-markdown';
+import { useEffect, useState } from 'react';
+import mermaid from 'mermaid';
+
+// Mermaid初期化
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  securityLevel: 'loose',
+  themeVariables: {
+    primaryColor: '#ffffff',
+    primaryBorderColor: '#333333',
+    primaryTextColor: '#333333',
+    secondaryColor: '#f5f5f5',
+    secondaryBorderColor: '#333333',
+    tertiaryColor: '#ffffff',
+    lineColor: '#333333',
+    textColor: '#333333',
+    mainBkg: '#ffffff',
+    nodeBorder: '#333333',
+    clusterBkg: '#f9f9f9',
+    clusterBorder: '#333333',
+    titleColor: '#333333',
+    edgeLabelBackground: '#ffffff',
+  },
+});
+
+// グローバルなIDカウンター
+let mermaidIdCounter = 0;
+
+// Mermaidコンポーネント
+function MermaidDiagram({ code }: { code: string }) {
+  const [svg, setSvg] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const renderDiagram = async () => {
+      // 毎回新しいユニークIDを生成
+      const id = `mermaid-${Date.now()}-${++mermaidIdCounter}`;
+      try {
+        // 既存のSVGがあれば削除
+        const existingElement = document.getElementById(id);
+        if (existingElement) {
+          existingElement.remove();
+        }
+        
+        const { svg } = await mermaid.render(id, code);
+        setSvg(svg);
+        setError(null);
+      } catch (err) {
+        console.error('Mermaid render error:', err);
+        setError(String(err));
+        setSvg('');
+      }
+    };
+    renderDiagram();
+  }, [code]);
+
+  if (error) {
+    return (
+      <div className="my-4 p-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <strong>Mermaid Error:</strong> {error}
+        <pre className="mt-2 text-xs overflow-auto">{code}</pre>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="mermaid-container my-4 flex justify-center overflow-auto bg-white p-4 rounded-lg border border-gray-300"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
 
 interface MarkdownViewerProps {
   /** マークダウンコンテンツ */
@@ -87,10 +160,12 @@ export function MarkdownViewer({ content, currentSectionId, onLinkClick }: Markd
       const match = /language-(\w+)/.exec(className || '');
       const isInline = !match && !className;
       
+      console.log('Code block:', { className, match, isInline, children: String(children).substring(0, 50) });
+      
       if (isInline) {
         return (
           <code
-            className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600"
+            className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800"
             {...props}
           >
             {children}
@@ -98,12 +173,28 @@ export function MarkdownViewer({ content, currentSectionId, onLinkClick }: Markd
         );
       }
 
+      // Mermaid図の場合
+      if (match && match[1] === 'mermaid') {
+        return <MermaidDiagram code={String(children).replace(/\n$/, '')} />;
+      }
+
+      // 言語指定がない場合はシンプルな表示
+      if (!match) {
+        return (
+          <pre className="bg-transparent border-0 p-0 overflow-x-auto">
+            <code className="text-gray-800 dark:text-gray-200">
+              {String(children).replace(/\n$/, '')}
+            </code>
+          </pre>
+        );
+      }
+
       return (
         <SyntaxHighlighter
-          style={oneLight}
-          language={match ? match[1] : 'text'}
+          style={vscDarkPlus}
+          language={match[1]}
           PreTag="div"
-          className="rounded-lg !bg-gray-50 !p-4 text-sm"
+          className="rounded-lg text-sm"
         >
           {String(children).replace(/\n$/, '')}
         </SyntaxHighlighter>
@@ -112,7 +203,7 @@ export function MarkdownViewer({ content, currentSectionId, onLinkClick }: Markd
   };
 
   return (
-    <article className="prose prose-gray max-w-none">
+    <article className="prose prose-slate max-w-none">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>
