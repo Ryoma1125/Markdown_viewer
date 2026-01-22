@@ -77,6 +77,56 @@ function MermaidDiagram({ code }: { code: string }) {
   );
 }
 
+// コードブロックコンポーネント（コピーボタン付き）
+function CodeBlock({ code, language }: { code: string; language?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  if (language) {
+    return (
+      <div className="relative group">
+        <button
+          onClick={handleCopy}
+          className="absolute right-2 top-2 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={language}
+          PreTag="div"
+          className="rounded-lg text-sm"
+        >
+          {code}
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group">
+      <button
+        onClick={handleCopy}
+        className="absolute right-2 top-2 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        {copied ? '✓ Copied' : 'Copy'}
+      </button>
+      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
 interface MarkdownViewerProps {
   /** マークダウンコンテンツ */
   content: string | null;
@@ -181,26 +231,11 @@ export function MarkdownViewer({ content, currentSectionId, onLinkClick }: Markd
 
       // 言語指定がある場合はシンタックスハイライト
       if (match) {
-        return (
-          <SyntaxHighlighter
-            style={vscDarkPlus}
-            language={match[1]}
-            PreTag="div"
-            className="rounded-lg text-sm"
-          >
-            {String(children).replace(/\n$/, '')}
-          </SyntaxHighlighter>
-        );
+        return <CodeBlock code={String(children).replace(/\n$/, '')} language={match[1]} />;
       }
 
       // 言語指定がない場合も黒背景で表示
-      return (
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
-          <code>
-            {String(children).replace(/\n$/, '')}
-          </code>
-        </pre>
-      );
+      return <CodeBlock code={String(children).replace(/\n$/, '')} />;
     },
   };
 
