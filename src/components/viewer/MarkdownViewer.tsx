@@ -24,24 +24,47 @@ export function MarkdownViewer({ content, currentSectionId, onLinkClick }: Markd
 
   const components: Components = {
     a({ href, children, ...props }) {
-      // 相対パス（.md ファイル）へのリンクの場合
-      if (href && href.match(/^\.\/.*\.md$/)) {
+      // 相対パス（.md ファイル）へのリンクの場合（./または../で始まる）
+      if (href && href.match(/^\.\.?\/.*\.md$/)) {
+        const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onLinkClick && currentSectionId) {
+            // 相対パスを解決
+            let targetSectionId: string;
+            
+            if (href.startsWith('../')) {
+              // 親ディレクトリへのリンク
+              const currentParts = currentSectionId.split('/');
+              const relativePath = decodeURIComponent(href.replace('../', ''));
+              // phase1/01_xxx.md -> phase2/01_yyy.md
+              if (currentParts.length >= 2) {
+                targetSectionId = relativePath;
+              } else {
+                targetSectionId = relativePath;
+              }
+            } else {
+              // 同じディレクトリ内のリンク
+              const currentDir = currentSectionId.split('/').slice(0, -1).join('/');
+              const fileName = decodeURIComponent(href.replace('./', ''));
+              targetSectionId = currentDir ? `${currentDir}/${fileName}` : fileName;
+            }
+            
+            console.log('Link clicked:', {
+              href,
+              currentSectionId,
+              targetSectionId
+            });
+            onLinkClick(targetSectionId);
+          }
+          return false;
+        };
+
         return (
           <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              if (onLinkClick && currentSectionId) {
-                // 現在の節のディレクトリを取得
-                const currentDir = currentSectionId.split('/').slice(0, -1).join('/');
-                // 相対パスを解決
-                const fileName = href.replace('./', '');
-                const targetSectionId = currentDir ? `${currentDir}/${fileName}` : fileName;
-                onLinkClick(targetSectionId);
-              }
-            }}
+            href="javascript:void(0)"
+            onClick={handleClick}
             className="text-blue-600 hover:text-blue-800 underline cursor-pointer"
-            {...props}
           >
             {children}
           </a>
