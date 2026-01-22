@@ -156,9 +156,10 @@ export function MarkdownViewer({ content, currentSectionId, onLinkClick }: Markd
         </a>
       );
     },
-    code({ className, children, ...props }) {
+    code({ className, children, node, ...props }) {
       const match = /language-(\w+)/.exec(className || '');
-      const isInline = !match && !className;
+      // 親要素がpreかどうかでインラインコードかブロックかを判定
+      const isInline = node?.position && !String(children).includes('\n') && !className;
       
       console.log('Code block:', { className, match, isInline, children: String(children).substring(0, 50) });
       
@@ -178,26 +179,27 @@ export function MarkdownViewer({ content, currentSectionId, onLinkClick }: Markd
         return <MermaidDiagram code={String(children).replace(/\n$/, '')} />;
       }
 
-      // 言語指定がない場合はシンプルな表示
-      if (!match) {
+      // 言語指定がある場合はシンタックスハイライト
+      if (match) {
         return (
-          <pre className="bg-transparent border-0 p-0 overflow-x-auto">
-            <code className="text-gray-800 dark:text-gray-200">
-              {String(children).replace(/\n$/, '')}
-            </code>
-          </pre>
+          <SyntaxHighlighter
+            style={vscDarkPlus}
+            language={match[1]}
+            PreTag="div"
+            className="rounded-lg text-sm"
+          >
+            {String(children).replace(/\n$/, '')}
+          </SyntaxHighlighter>
         );
       }
 
+      // 言語指定がない場合も黒背景で表示
       return (
-        <SyntaxHighlighter
-          style={vscDarkPlus}
-          language={match[1]}
-          PreTag="div"
-          className="rounded-lg text-sm"
-        >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
+        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+          <code>
+            {String(children).replace(/\n$/, '')}
+          </code>
+        </pre>
       );
     },
   };
